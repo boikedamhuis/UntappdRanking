@@ -1,0 +1,64 @@
+
+	.payButton {
+	-moz-box-shadow: 3px 3px 0px 0px #3dc21b;
+	-webkit-box-shadow: 3px 3px 0px 0px #3dc21b;
+	box-shadow: 3px 3px 0px 0px #3dc21b;
+	background-color:#a7da7b;
+	-moz-border-radius:3px;
+	-webkit-border-radius:3px;
+	border-radius:3px;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:17px;
+	font-weight:bold;
+	padding:8px 52px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #2f6627;
+	margin-right: 10px;
+}
+.payButton:hover {
+	background-color:#5cbf2a;
+}
+.payButton:active {
+	position:relative;
+	top:1px;
+}
+
+table {
+  border-spacing: 0;
+  width: 60%;
+  border: 1px solid color:#A8DA7B;;
+  margin-top: 10px;
+}
+
+th {
+  cursor: pointer;
+  font-size: 30px;
+  color: white;
+}
+
+th, td {
+  text-align: left;
+  padding: 16px;
+}
+tr:nth-child(odd) {
+	color:#A8DA7B;
+	font-family: arial;
+}
+tr:nth-child(even) {
+	color:#000;
+		font-family: arial;
+
+}
+tr:nth-child(even) {
+  background-color: #A8DA7B
+  
+}
+tr:nth-child(odd) {
+  background-color: #333232
+}
+body {
+	background-color: #2b2c2c;
+}
