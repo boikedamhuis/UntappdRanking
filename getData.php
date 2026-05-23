@@ -1,7 +1,14 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/APIData.php';
+$localConfigFile = __DIR__ . '/APIData.local.php';
+$defaultConfigFile = __DIR__ . '/APIData.php';
+
+if (is_readable($localConfigFile)) {
+    require_once $localConfigFile;
+} else {
+    require_once $defaultConfigFile;
+}
 
 $untappdUsers = array_values(array_filter($DATAUSERNAMES ?? []));
 $cacheFile = __DIR__ . '/savedUntappdData.json';
@@ -100,7 +107,6 @@ function untappdHttpGet(string $url): string|false
 
         $response = curl_exec($curl);
         $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
-        curl_close($curl);
 
         if (!is_string($response) || $status >= 400) {
             return false;

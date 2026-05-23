@@ -7,8 +7,8 @@ everyone into a clean responsive ranking.
 ## Setup
 
 1. Request a client ID and client secret at <https://untappd.com/api/>.
-2. Add those values to `APIData.php`.
-3. Add the Untappd usernames you want to track to `$DATAUSERNAMES`.
+2. Copy `APIData.example.php` to `APIData.local.php`.
+3. Add your credentials and usernames to `APIData.local.php`.
 4. Serve the folder with PHP and open `index.php`.
 
 ## How It Works
@@ -25,7 +25,8 @@ rendering an empty table.
 
 ## Files
 
-- `APIData.php` stores API credentials and usernames.
+- `APIData.example.php` shows the local config shape.
+- `APIData.local.php` stores your private API credentials and is ignored by Git.
 - `getData.php` fetches, normalizes, sorts, and caches Untappd data.
 - `index.php` renders the leaderboard.
 - `sortTable.js` adds client-side sorting.

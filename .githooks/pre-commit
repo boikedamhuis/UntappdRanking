@@ -1,0 +1,18 @@
+#!/bin/sh
+
+staged_files=$(git diff --cached --name-only)
+
+if echo "$staged_files" | grep -Eq '(^|/)APIData\.php$|(^|/)APIData\.local\.php$'; then
+  echo "Refusing commit: Untappd API config/secrets file is staged."
+  echo "Keep credentials local and unstaged."
+  exit 1
+fi
+
+if ! git diff --cached --check; then
+  exit 1
+fi
+
+if [ -n "$staged_files" ] && echo "$staged_files" | xargs grep -EI '[A-Fa-f0-9]{40}' >/dev/null 2>&1; then
+  echo "Refusing commit: staged changes look like they contain an API key or secret."
+  exit 1
+fi
