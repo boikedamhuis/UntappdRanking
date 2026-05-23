@@ -1,37 +1,68 @@
-function insertAfter(referenceNode, newNode) {
-    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-}
-function sortTable() {
-  var table, rows, switching, i, x, y, shouldSwitch;
-  table = document.getElementById("myTable");
-  switching = true;
-  /*Make a loop that will continue until
-  no switching has been done:*/
-  while (switching) {
-    //start by saying: no switching is done:
-    switching = false;
-    rows = table.rows;
-    /*Loop through all table rows (except the
-    first, which contains table headers):*/
-    for (i = 1; i < (rows.length - 1); i++) {
-      //start by saying there should be no switching:
-      shouldSwitch = false;
-      /*Get the two elements you want to compare,
-      one from current row and one from the next:*/
-      x = rows[i].getElementsByTagName("TD")[1];
-      y = rows[i + 1].getElementsByTagName("TD")[1];
-      //check if the two rows should switch place:
-      if (Number(x.innerHTML) < Number(y.innerHTML)) {
-        //if so, mark as a switch and break the loop:
-        shouldSwitch = true;
-        break;
+const table = document.querySelector("#rankingTable");
+
+if (table) {
+  const headers = [...table.querySelectorAll("th[data-sort]")];
+  const tbody = table.querySelector("tbody");
+  let activeIndex = null;
+  let direction = "desc";
+
+  const getCellValue = (row, index) => {
+    const cell = row.children[index];
+    return cell?.dataset.value ?? cell?.textContent.trim() ?? "";
+  };
+
+  const compareRows = (index, sortType) => (firstRow, secondRow) => {
+    const first = getCellValue(firstRow, index);
+    const second = getCellValue(secondRow, index);
+
+    if (sortType === "number") {
+      return Number(first) - Number(second);
+    }
+
+    return first.localeCompare(second, "nl", { sensitivity: "base" });
+  };
+
+  const renumberRanks = () => {
+    [...tbody.rows].forEach((row, index) => {
+      const rank = row.querySelector(".rank");
+      if (rank) {
+        rank.textContent = String(index + 1);
       }
-    }
-    if (shouldSwitch) {
-      /*If a switch has been marked, make the switch
-      and mark that a switch has been done:*/
-      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-      switching = true;
-    }
-  }
+    });
+  };
+
+  const sortByHeader = (header) => {
+    const index = header.cellIndex;
+    const sortType = header.dataset.sort;
+    const rows = [...tbody.rows];
+    const nextDirection = activeIndex === index && direction === "desc" ? "asc" : "desc";
+    const multiplier = nextDirection === "asc" ? 1 : -1;
+
+    rows
+      .sort((firstRow, secondRow) => compareRows(index, sortType)(firstRow, secondRow) * multiplier)
+      .forEach((row) => tbody.appendChild(row));
+
+    headers.forEach((item) => {
+      item.classList.toggle("is-sorted", item === header);
+      item.removeAttribute("aria-sort");
+    });
+
+    header.setAttribute("aria-sort", nextDirection === "asc" ? "ascending" : "descending");
+    activeIndex = index;
+    direction = nextDirection;
+    renumberRanks();
+  };
+
+  headers.forEach((header) => {
+    header.tabIndex = 0;
+    header.addEventListener("click", () => sortByHeader(header));
+    header.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        sortByHeader(header);
+      }
+    });
+  });
+
+  sortByHeader(headers.find((header) => header.dataset.sort === "number") ?? headers[0]);
 }
