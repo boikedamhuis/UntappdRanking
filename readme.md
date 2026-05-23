@@ -18,12 +18,28 @@ Explorer Score. The score favors variety and unusual choices more than raw
 volume:
 
 ```text
-style diversity + category spread + weird beer tags + ABV range + country spread + small badge/photo bonus
+season score = style diversity + category spread + weird beer tags + ABV range + country spread + season bonus + tiny badge/photo bonus
 ```
 
 Examples of higher-value signals are sour/wild beers, lambic/gueuze, barrel
 aging, smoked beers, barleywine, unusual ingredients, strong sippers, low-ABV
 table beers, and drinking across multiple styles and countries.
+
+The active season is selected automatically. Normal seasons are `Lentebokaal`,
+`Zomercompetitie`, `Herfstproeverij`, and `Winterklassement`; short event
+seasons include `Nieuwjaarsduik`, `Paasproeverij`, `Koningsdag Kraker`,
+`Oktoberfest Sprint`, `Halloween Horror Pour`, and `Kerstkelder`. Each season
+has its own bonus focus, so the leaderboard can reset its flavor throughout the
+year.
+
+Event seasons also award lifetime honor points. The current event leader is
+stored in `eventHonors.json` and receives a persistent trophy bonus, so winning
+Koningsdag, Pasen, Kerst, and similar events keeps counting after the event ends.
+
+Each player also receives small achievement badges, such as `Style Nomad`,
+`World Tour`, `Sour Survivor`, `Barrel Baron`, `Big Sipper`, `Crispy Diplomat`,
+`Tiny Beer Hero`, and `Weird Flex`. Open a player's score in the table to see
+the point breakdown.
 
 Fetched results are cached in `savedUntappdData.json` for 30 minutes. If the API
 is temporarily unavailable, the page falls back to the latest cache instead of

@@ -19,6 +19,16 @@ function formatUpdatedAt(string $updatedAt): string
     return 'Bijgewerkt ' . date('H:i', $timestamp);
 }
 
+function formatSeasonDate(string $date): string
+{
+    try {
+        $parsed = new DateTimeImmutable($date);
+        return $parsed->setTimezone(new DateTimeZone('Europe/Amsterdam'))->format('d M');
+    } catch (Exception) {
+        return 'onbekend';
+    }
+}
+
 function uniquePlayerValues(array $players, string $key): array
 {
     $values = [];
@@ -32,10 +42,29 @@ function uniquePlayerValues(array $players, string $key): array
     return array_values($values);
 }
 
+function scoreLabel(string $key): string
+{
+    $labels = [
+        'style' => 'Stijlspreiding',
+        'category' => 'Categorieën',
+        'weird' => 'Gekke tags',
+        'abv' => 'ABV-avontuur',
+        'country' => 'Landen',
+        'season' => 'Seizoen bonus',
+        'honors' => 'Event honors',
+        'badge' => 'Badge bonus',
+        'photo' => 'Foto bonus',
+    ];
+
+    return $labels[$key] ?? $key;
+}
+
 $leader = $players[0] ?? null;
 $averageScore = count($players) > 0 ? array_sum(array_map(static fn (array $player): float => (float) $player['score'], $players)) / count($players) : 0;
 $allCategories = uniquePlayerValues($players, 'categories');
-$allWeirdTags = uniquePlayerValues($players, 'weirdTags');
+$totalAchievements = array_sum(array_map(static fn (array $player): int => count($player['achievements'] ?? []), $players));
+$seasonCheckins = array_sum(array_map(static fn (array $player): int => (int) ($player['seasonCheckins'] ?? 0), $players));
+$lifetimeHonorPoints = array_sum(array_map(static fn (array $player): int => (int) ($player['honorPoints'] ?? 0), $players));
 $statusLabels = [
     'live' => 'Live data',
     'cached' => 'Cache data',
@@ -56,17 +85,36 @@ $statusLabels = [
         <section class="hero" aria-labelledby="page-title">
             <div>
                 <p class="eyebrow">Untappd friends contest</p>
-                <h1 id="page-title">Beer bragging rights voor avonturiers.</h1>
+                <h1 id="page-title"><?= e((string) ($activeSeason['label'] ?? 'Seizoen')) ?></h1>
                 <p class="intro">
-                    Niet de grootste drinklijst wint, maar de speler met de meeste stijlspreiding,
-                    gekke vondsten, sterke sippers, zure uitstapjes en internationale omwegen.
+                    <?= e((string) ($activeSeason['description'] ?? 'Niet de grootste drinklijst wint, maar de beste seizoensvondsten.')) ?>
                 </p>
             </div>
 
             <div class="hero-panel" aria-label="Huidige leider">
-                <span class="panel-label">Bovenaan</span>
+                <span class="panel-label">Seizoensleider</span>
                 <strong><?= e((string) ($leader['displayName'] ?? 'Nog niemand')) ?></strong>
-                <span><?= e((string) ($leader['latestBeer'] ?? 'Voeg spelers toe in APIData.php')) ?></span>
+                <span>
+                    <?= e((string) ($leader['latestBeer'] ?? 'Voeg spelers toe in APIData.php')) ?>
+                    <?php if (isset($activeSeason['daysLeft'])): ?>
+                        <small><?= e((string) $activeSeason['daysLeft']) ?> dagen te gaan</small>
+                    <?php endif; ?>
+                </span>
+            </div>
+        </section>
+
+        <section class="season-strip" aria-label="Seizoensregels">
+            <div>
+                <span>Bonusfocus</span>
+                <p><?= e(implode(' / ', array_slice($activeSeason['focusCategories'] ?? [], 0, 4))) ?></p>
+            </div>
+            <div>
+                <span>Periode</span>
+                <p><?= e(formatSeasonDate((string) $activeSeason['start'])) ?> tot <?= e(formatSeasonDate((string) $activeSeason['end'])) ?></p>
+            </div>
+            <div>
+                <span>Voortgang</span>
+                <p><?= e((string) ($activeSeason['progress'] ?? 0)) ?>% gespeeld</p>
             </div>
         </section>
 
@@ -80,12 +128,16 @@ $statusLabels = [
                 <p>gem. explorer score</p>
             </div>
             <div>
-                <span><?= count($allCategories) ?></span>
-                <p>categorieën</p>
+                <span><?= $seasonCheckins ?></span>
+                <p>seizoen check-ins</p>
             </div>
             <div>
-                <span><?= count($allWeirdTags) ?></span>
-                <p>gekke tags</p>
+                <span><?= $totalAchievements ?></span>
+                <p>achievements</p>
+            </div>
+            <div>
+                <span><?= $lifetimeHonorPoints ?></span>
+                <p>lifetime eventpunten</p>
             </div>
             <div>
                 <span><?= e($statusLabels[$dataStatus] ?? 'Status') ?></span>
@@ -139,23 +191,47 @@ $statusLabels = [
                                             <small>@<?= e((string) $player['username']) ?></small>
                                         </span>
                                     </a>
+                                    <?php if (!empty($player['achievements'])): ?>
+                                        <div class="achievement-list" aria-label="Achievements">
+                                            <?php foreach ($player['achievements'] as $achievement): ?>
+                                                <span title="<?= e((string) $achievement['reason']) ?>"><?= e((string) $achievement['name']) ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($player['eventHonors'])): ?>
+                                        <div class="honor-list" aria-label="Lifetime event honors">
+                                            <?php foreach (array_slice($player['eventHonors'], 0, 3) as $honor): ?>
+                                                <span title="<?= e((string) $honor['label']) ?>: +<?= e((string) $honor['points']) ?> lifetime punten">
+                                                    <?= e((string) $honor['trophy']) ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                                 <td data-label="Score" data-value="<?= e((string) $player['score']) ?>">
-                                    <strong><?= e(number_format((float) $player['score'], 1, ',', '.')) ?></strong>
-                                    <small class="score-note">
-                                        stijl <?= e((string) ($player['scoreBreakdown']['style'] ?? 0)) ?>,
-                                        gek <?= e((string) ($player['scoreBreakdown']['weird'] ?? 0)) ?>,
-                                        abv <?= e((string) ($player['scoreBreakdown']['abv'] ?? 0)) ?>
-                                    </small>
+                                    <details class="score-details">
+                                        <summary>
+                                            <strong><?= e(number_format((float) $player['score'], 1, ',', '.')) ?></strong>
+                                            <span>uitleg</span>
+                                        </summary>
+                                        <dl>
+                                            <?php foreach (($player['scoreBreakdown'] ?? []) as $key => $points): ?>
+                                                <div>
+                                                    <dt><?= e(scoreLabel((string) $key)) ?></dt>
+                                                    <dd><?= e(number_format((float) $points, 1, ',', '.')) ?></dd>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </dl>
+                                    </details>
                                 </td>
                                 <td data-label="Spreiding" data-value="<?= e((string) (($player['uniqueStyles'] ?? 0) + ($player['uniqueCountries'] ?? 0))) ?>">
                                     <div class="spread">
                                         <strong><?= e((string) ($player['uniqueStyles'] ?? 0)) ?></strong> stijlen
-                                        <span><?= e((string) ($player['uniqueCountries'] ?? 0)) ?> landen</span>
+                                        <span><?= e((string) ($player['seasonCheckins'] ?? 0)) ?> seizoen</span>
                                     </div>
                                 </td>
                                 <td data-label="Bijzonder">
-                                    <?php $tags = array_slice(array_merge($player['categories'] ?? [], $player['weirdTags'] ?? []), 0, 4); ?>
+                                    <?php $tags = array_slice(array_merge($player['seasonHits'] ?? [], $player['categories'] ?? [], $player['weirdTags'] ?? []), 0, 4); ?>
                                     <?php if ($tags !== []): ?>
                                         <div class="tag-list">
                                             <?php foreach ($tags as $tag): ?>
