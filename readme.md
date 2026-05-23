@@ -13,11 +13,17 @@ everyone into a clean responsive ranking.
 
 ## How It Works
 
-`getData.php` fetches user data from the Untappd API, calculates a score with:
+`getData.php` fetches user data from the Untappd API and calculates a Beer
+Explorer Score. The score favors variety and unusual choices more than raw
+volume:
 
 ```text
-(total photos + total badges) / 2
+style diversity + category spread + weird beer tags + ABV range + country spread + small badge/photo bonus
 ```
+
+Examples of higher-value signals are sour/wild beers, lambic/gueuze, barrel
+aging, smoked beers, barleywine, unusual ingredients, strong sippers, low-ABV
+table beers, and drinking across multiple styles and countries.
 
 Fetched results are cached in `savedUntappdData.json` for 30 minutes. If the API
 is temporarily unavailable, the page falls back to the latest cache instead of
