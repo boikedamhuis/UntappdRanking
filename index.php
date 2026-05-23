@@ -59,12 +59,58 @@ function scoreLabel(string $key): string
     return $labels[$key] ?? $key;
 }
 
+function formatAbv(float $abv): string
+{
+    if ($abv <= 0) {
+        return 'ABV onbekend';
+    }
+
+    return number_format($abv, 1, ',', '.') . '%';
+}
+
+function beerMatchesSeason(array $beer, array $activeSeason): bool
+{
+    $textForCategory = strtolower(($beer['style'] ?? '') . ' ' . ($beer['name'] ?? ''));
+    $text = strtolower(($beer['style'] ?? '') . ' ' . ($beer['name'] ?? '') . ' ' . ($beer['country'] ?? ''));
+    $categories = [
+        'Zuur & wild' => ['sour', 'wild', 'lambic', 'gueuze', 'gose', 'berliner', 'brett', 'farmhouse'],
+        'Hop & bitter' => ['ipa', 'pale ale', 'double ipa', 'triple ipa', 'neipa', 'hazy', 'bitter'],
+        'Donker & geroosterd' => ['stout', 'porter', 'black ale', 'schwarzbier', 'roasted'],
+        'Vat & hout' => ['barrel', 'bourbon', 'oak', 'aged', 'ba', 'foeder'],
+        'Fruit & kruidig' => ['fruit', 'spiced', 'herb', 'chili', 'pepper', 'pumpkin', 'tepache'],
+        'Sterk & sipper' => ['barleywine', 'quadrupel', 'tripel', 'strong ale', 'old ale', 'imperial'],
+        'Belgisch & klassiek' => ['belgian', 'saison', 'dubbel', 'tripel', 'witbier', 'abbey'],
+        'Tarwe & zacht' => ['wheat', 'weizen', 'hefeweizen', 'white ale', 'blonde'],
+        'Lager & crispy' => ['lager', 'pilsner', 'helles', 'kolsch', 'bock', 'marzen'],
+    ];
+
+    foreach ($categories as $category => $needles) {
+        foreach ($needles as $needle) {
+            if (str_contains($textForCategory, $needle) && in_array($category, $activeSeason['focusCategories'] ?? [], true)) {
+                return true;
+            }
+        }
+    }
+
+    foreach ($activeSeason['focusKeywords'] ?? [] as $keyword) {
+        if (str_contains($text, strtolower((string) $keyword))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 $leader = $players[0] ?? null;
 $averageScore = count($players) > 0 ? array_sum(array_map(static fn (array $player): float => (float) $player['score'], $players)) / count($players) : 0;
 $allCategories = uniquePlayerValues($players, 'categories');
 $totalAchievements = array_sum(array_map(static fn (array $player): int => count($player['achievements'] ?? []), $players));
 $seasonCheckins = array_sum(array_map(static fn (array $player): int => (int) ($player['seasonCheckins'] ?? 0), $players));
 $lifetimeHonorPoints = array_sum(array_map(static fn (array $player): int => (int) ($player['honorPoints'] ?? 0), $players));
+$lifetimePlayers = array_values(array_filter($players, static fn (array $player): bool => (int) ($player['honorPoints'] ?? 0) > 0));
+usort($lifetimePlayers, static function (array $first, array $second): int {
+    return ($second['honorPoints'] <=> $first['honorPoints']) ?: strcmp((string) $first['username'], (string) $second['username']);
+});
 $statusLabels = [
     'live' => 'Live data',
     'cached' => 'Cache data',
@@ -207,6 +253,37 @@ $statusLabels = [
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
+                                    <?php if (!empty($player['recentBeers'])): ?>
+                                        <details class="checkin-details">
+                                            <summary>check-ins</summary>
+                                            <ol>
+                                                <?php foreach (array_slice($player['recentBeers'], 0, 5) as $beer): ?>
+                                                    <?php $seasonMatch = beerMatchesSeason($beer, $activeSeason); ?>
+                                                    <li>
+                                                        <?php if (!empty($beer['label'])): ?>
+                                                            <img src="<?= e((string) $beer['label']) ?>" alt="" loading="lazy">
+                                                        <?php endif; ?>
+                                                        <span>
+                                                            <strong><?= e((string) ($beer['name'] ?? 'Onbekend bier')) ?></strong>
+                                                            <small>
+                                                                <?= e((string) ($beer['style'] ?? 'Onbekende stijl')) ?>
+                                                                · <?= e(formatAbv((float) ($beer['abv'] ?? 0))) ?>
+                                                            </small>
+                                                            <small>
+                                                                <?= e((string) ($beer['brewery'] ?? 'Onbekende brouwerij')) ?>
+                                                                <?php if (!empty($beer['country'])): ?>
+                                                                    · <?= e((string) $beer['country']) ?>
+                                                                <?php endif; ?>
+                                                            </small>
+                                                            <?php if ($seasonMatch): ?>
+                                                                <em>seizoensmatch</em>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ol>
+                                        </details>
+                                    <?php endif; ?>
                                 </td>
                                 <td data-label="Score" data-value="<?= e((string) $player['score']) ?>">
                                     <details class="score-details">
@@ -253,6 +330,45 @@ $statusLabels = [
                     </tbody>
                 </table>
             </div>
+        </section>
+
+        <section class="leaderboard lifetime-board" aria-labelledby="lifetime-title">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">Historie</p>
+                    <h2 id="lifetime-title">Lifetime event leaderboard</h2>
+                </div>
+            </div>
+
+            <?php if ($lifetimePlayers !== []): ?>
+                <div class="lifetime-list">
+                    <?php foreach ($lifetimePlayers as $index => $player): ?>
+                        <article>
+                            <span class="rank"><?= $index + 1 ?></span>
+                            <div>
+                                <strong><?= e((string) $player['displayName']) ?></strong>
+                                <p><?= e((string) $player['honorPoints']) ?> lifetime eventpunten</p>
+                                <div class="honor-list">
+                                    <?php foreach (array_slice($player['eventHonors'] ?? [], 0, 5) as $honor): ?>
+                                        <span title="<?= e((string) $honor['label']) ?>: +<?= e((string) $honor['points']) ?> punten">
+                                            <?= e((string) $honor['trophy']) ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <strong>Nog geen feestdagwinnaars vastgelegd.</strong>
+                    <p>
+                        Vanaf events zoals Pasen, Koningsdag, Oktoberfest, Halloween, Kerst en Nieuwjaar
+                        krijgt de eventleider blijvende punten. Voor eerdere feestdagen kan de app geen eerlijke
+                        winnaar reconstrueren zonder opgeslagen historische snapshots.
+                    </p>
+                </div>
+            <?php endif; ?>
         </section>
     </main>
 </body>
